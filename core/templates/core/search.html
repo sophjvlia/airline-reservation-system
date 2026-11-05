@@ -1,0 +1,173 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% load tz %}
+
+{% block title %}Search Flights - Python Airlines{% endblock %}
+
+{% block body_class %}search-page-body{% endblock %}
+
+{% block extra_head %}
+<style>
+    body.search-page-body {
+        isolation: isolate;
+        background: transparent;
+    }
+
+    body.search-page-body::before {
+        position: fixed;
+        z-index: 0;
+        inset: 0;
+        content: "";
+        pointer-events: none;
+        background-image:
+            url("{% static 'core/images/fluffy-clouds.jpg' %}");
+        background-position: center;
+        background-size: cover;
+    }
+
+    body.search-page-body > nav,
+    body.search-page-body > main,
+    body.search-page-body > footer {
+        position: relative;
+        z-index: 1;
+    }
+
+    body.search-page-body > nav,
+    body.search-page-body > footer {
+        background-color: rgba(5, 15, 26, 0.68);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+    }
+
+    body.search-page-body > nav {
+        z-index: 50;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mx-auto my-6 max-w-5xl space-y-10 sm:my-10">
+    <section class="relative overflow-hidden rounded-[2rem] border border-white/25 bg-slate-950/55 p-6 text-white shadow-2xl shadow-slate-950/25 backdrop-blur-2xl sm:p-10 lg:p-12">
+        <div class="pointer-events-none absolute -right-20 -top-28 h-72 w-72 rounded-full bg-cyan-200/10 blur-3xl"></div>
+        <div class="relative space-y-8">
+            <div class="max-w-2xl space-y-4">
+                <p class="text-[0.68rem] font-semibold uppercase tracking-[0.28em] text-amber-200">A little further. A little freer.</p>
+                <h1 class="text-4xl font-semibold leading-tight tracking-tight sm:text-5xl lg:text-6xl">Your next horizon<br class="hidden sm:block"> is closer than you think.</h1>
+                <p class="max-w-xl text-sm leading-6 text-slate-200 sm:text-base">Discover a smoother way to get there. Find a flight that makes the journey part of the escape.</p>
+            </div>
+
+            <div class="rounded-2xl border border-white/20 bg-slate-950/50 p-4 shadow-inner shadow-white/5 sm:p-6">
+                <div class="mb-5 flex items-center justify-between gap-4">
+                    <h2 class="text-sm font-semibold tracking-wide text-white sm:text-base">Plan your next journey</h2>
+                    <span class="hidden items-center gap-2 text-[0.65rem] font-medium uppercase tracking-[0.18em] text-slate-300 sm:inline-flex">
+                        <span class="h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_10px_rgba(110,231,183,0.8)]"></span>
+                        Find your way out there
+                    </span>
+                </div>
+
+                <form method="GET" action="{% url 'flight_search' %}" class="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div class="space-y-2">
+                        <label for="origin" class="block text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-300">From</label>
+                        <select id="origin" name="origin" required class="w-full rounded-xl border border-white/15 bg-white/10 px-4 py-3.5 text-sm text-white shadow-sm outline-none transition focus:border-amber-200/70 focus:ring-2 focus:ring-amber-200/30">
+                            <option value="" disabled {% if not origin %}selected{% endif %} class="text-slate-900">Select origin airport</option>
+                            {% for airport in airports %}
+                                <option value="{{ airport.code }}" {% if origin == airport.code %}selected{% endif %} class="text-slate-900">
+                                    {{ airport.code }} - {{ airport.city }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label for="destination" class="block text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-300">To</label>
+                        <select id="destination" name="destination" required class="w-full rounded-xl border border-white/15 bg-white/10 px-4 py-3.5 text-sm text-white shadow-sm outline-none transition focus:border-amber-200/70 focus:ring-2 focus:ring-amber-200/30">
+                            <option value="" disabled {% if not destination %}selected{% endif %} class="text-slate-900">Select destination airport</option>
+                            {% for airport in airports %}
+                                <option value="{{ airport.code }}" {% if destination == airport.code %}selected{% endif %} class="text-slate-900">
+                                    {{ airport.code }} - {{ airport.city }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label for="date" class="block text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-slate-300">Departure date</label>
+                        <input id="date" type="date" name="date" value="{{ date }}" required class="w-full rounded-xl border border-white/15 bg-white/10 px-4 py-3.5 text-sm text-white shadow-sm outline-none transition focus:border-amber-200/70 focus:ring-2 focus:ring-amber-200/30">
+                    </div>
+
+                    <div class="pt-1 md:col-span-3">
+                        <button type="submit" class="group flex w-full items-center justify-center gap-3 rounded-xl bg-amber-200 px-5 py-4 text-sm font-bold tracking-wide text-slate-950 shadow-lg shadow-amber-950/20 transition hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-100 focus:ring-offset-2 focus:ring-offset-slate-900">
+                            Explore available flights
+                            <svg aria-hidden="true" class="h-4 w-4 transition-transform group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                            </svg>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="rounded-2xl border border-rose-200/30 bg-rose-950/55 p-4 text-sm text-rose-50 shadow-lg backdrop-blur-xl">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Search Results Partial -->
+    {% include 'core/partials/flight_results.html' %}
+
+    <!-- Featured Upcoming Flights Section -->
+    <section class="space-y-5 pt-1">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <p class="text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-amber-200">Handpicked departures</p>
+                <h2 class="mt-1 text-2xl font-semibold tracking-tight text-white sm:text-3xl">The world is waiting</h2>
+            </div>
+            <span class="text-xs text-slate-200/80">A few places to begin</span>
+        </div>
+
+        {% if upcoming_flights %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for flight in upcoming_flights %}
+            <article class="group rounded-2xl border border-white/25 bg-slate-950/70 p-5 text-white shadow-xl shadow-slate-950/20 backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-amber-100/45 hover:bg-slate-950/80">
+                <div class="flex items-center justify-between gap-3">
+                    <span class="rounded-lg border border-white/10 bg-white/10 px-2.5 py-1 font-mono text-xs font-semibold tracking-wide text-slate-100">{{ flight.callsign }}</span>
+                    <span class="rounded-full border border-emerald-200/20 bg-emerald-300/10 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-wider text-emerald-100">{{ flight.status }}</span>
+                </div>
+
+                <div class="my-5 flex items-center justify-between font-semibold tracking-wide">
+                    <span>{{ flight.origin.code }}</span>
+                    <span class="flex flex-1 items-center px-4 text-amber-100/80" aria-hidden="true">
+                        <span class="h-px flex-1 bg-gradient-to-r from-white/10 via-amber-100/60 to-white/10"></span>
+                        <span class="px-2 text-sm">✦</span>
+                        <span class="h-px flex-1 bg-gradient-to-r from-white/10 via-amber-100/60 to-white/10"></span>
+                    </span>
+                    <span>{{ flight.destination.code }}</span>
+                </div>
+
+                <div class="space-y-2 text-xs text-slate-200/85">
+                    <p>Departure <span class="font-medium text-white">{% timezone flight.origin.timezone %}{{ flight.scheduled_departure_time|date:"M d, Y · H:i T" }}{% endtimezone %}</span></p>
+                    <p>{{ flight.available_seats }} seats remaining</p>
+                </div>
+
+                <div class="mt-5 flex items-center justify-between border-t border-white/15 pt-4">
+                    <span class="font-semibold text-amber-100">MYR {{ flight.base_price }}</span>
+                    <a href="{% url 'seat_selection' flight.id %}" class="rounded-lg bg-amber-200 px-3.5 py-2 text-xs font-semibold text-slate-950 transition hover:bg-amber-100">
+                        Discover flight
+                    </a>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="rounded-2xl border border-white/15 bg-slate-950/35 p-6 text-center text-sm text-slate-100 backdrop-blur-xl">
+            No upcoming flights found. Run <code class="rounded bg-white/10 px-1.5 py-0.5 text-amber-100">.\venv\Scripts\python manage.py seed_data</code> to populate test flights.
+        </div>
+        {% endif %}
+    </section>
+
+</div>
+{% endblock %}

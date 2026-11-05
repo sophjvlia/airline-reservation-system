@@ -1,0 +1,74 @@
+{% load tz %}
+{% if searched %}
+    {% if itineraries %}
+        <div class="space-y-4">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                    <p class="text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-amber-200">Curated for your journey</p>
+                    <h2 class="mt-1 text-2xl font-semibold tracking-tight text-white sm:text-3xl">Available flight options</h2>
+                </div>
+                <span class="text-xs text-slate-200/80">{{ itineraries|length }} journey{{ itineraries|length|pluralize }} to explore</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for itin in itineraries %}
+                    {% with last_flight=itin.flights|last %}
+                    <article class="group flex flex-col rounded-2xl border border-white/25 bg-slate-950/75 p-5 text-white shadow-xl shadow-slate-950/20 backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-amber-100/45 hover:bg-slate-950/85">
+                        <div class="flex items-center justify-between gap-3">
+                            <span class="rounded-lg border border-white/10 bg-white/10 px-2.5 py-1 font-mono text-xs font-semibold tracking-wide text-slate-100">{{ itin.flights.0.callsign }}</span>
+                            <span class="rounded-full border border-amber-100/20 bg-amber-100/10 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-wider text-amber-100">{{ itin.type }}</span>
+                        </div>
+
+                        <div class="my-5 flex items-center justify-between font-semibold tracking-wide">
+                            <span>{{ itin.flights.0.origin.code }}</span>
+                            <span class="flex flex-1 items-center px-4 text-amber-100/80" aria-hidden="true">
+                                <span class="h-px flex-1 bg-gradient-to-r from-white/10 via-amber-100/60 to-white/10"></span>
+                                <span class="px-2 text-sm">✦</span>
+                                <span class="h-px flex-1 bg-gradient-to-r from-white/10 via-amber-100/60 to-white/10"></span>
+                            </span>
+                            <span>{{ last_flight.destination.code }}</span>
+                        </div>
+
+                        <div class="flex-grow space-y-3 text-xs text-slate-200/85">
+                            {% for flight in itin.flights %}
+                                <div class="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span class="font-medium text-white">{{ flight.callsign }}</span>
+                                        <span class="text-right">
+                                            {% timezone flight.origin.timezone %}{{ flight.scheduled_departure_time|date:"H:i T" }}{% endtimezone %}
+                                            <svg aria-hidden="true" class="mx-1 inline h-3.5 w-3.5 text-amber-100/70" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                                            </svg>
+                                            {% timezone flight.destination.timezone %}{{ flight.scheduled_arrival_time|date:"H:i T" }}{% endtimezone %}
+                                        </span>
+                                    </div>
+                                    <p class="mt-1 text-[0.68rem] text-slate-300">{{ flight.origin.city }} to {{ flight.destination.city }} <span class="text-white/40">·</span> {{ flight.available_seats }} seats left</p>
+                                </div>
+                            {% endfor %}
+                            <p class="flex items-center justify-between text-slate-300">
+                                <span>{% if itin.flights|length > 1 %}1 connection{% else %}Nonstop{% endif %}</span>
+                                <span>Total duration <span class="font-semibold text-white">{{ itin.total_duration }}</span></span>
+                            </p>
+                        </div>
+
+                        <div class="mt-5 flex items-center justify-between border-t border-white/15 pt-4">
+                            <div>
+                                <span class="block text-[0.6rem] font-medium uppercase tracking-[0.18em] text-slate-300">From</span>
+                                <span class="font-semibold text-amber-100">MYR {{ itin.total_price }}</span>
+                            </div>
+                            <a href="{% url 'seat_selection' itin.flights.0.id %}" class="rounded-lg bg-amber-200 px-3.5 py-2 text-xs font-semibold text-slate-950 transition hover:bg-amber-100">
+                                Choose journey
+                            </a>
+                        </div>
+                    </article>
+                    {% endwith %}
+                {% endfor %}
+            </div>
+        </div>
+    {% else %}
+        <div class="rounded-2xl border border-white/20 bg-slate-950/70 p-8 text-center text-slate-100 shadow-xl backdrop-blur-xl">
+            <p class="text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-amber-200">A different horizon awaits</p>
+            <h2 class="mt-2 text-xl font-semibold text-white">No journeys found this time</h2>
+            <p class="mt-2 text-sm text-slate-200/80">Try another date or airport pair and we’ll look again.</p>
+        </div>
+    {% endif %}
+{% endif %}

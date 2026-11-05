@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Python Airlines - Enterprise Airline System{% endblock %}</title>
+    {% block extra_head %}{% endblock %}
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- HTMX CDN -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans min-h-screen flex flex-col {% block body_class %}{% endblock %}">
+
+    <!-- Navigation Header -->
+    <nav class="relative z-50 bg-slate-900 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="relative flex min-h-16 items-center justify-between">
+                <a href="{% url 'flight_search' %}" class="flex items-center gap-2 whitespace-nowrap text-lg font-bold tracking-wide sm:text-xl">
+                    <span>Python Airlines</span>
+                </a>
+                <button id="navigation-toggle" type="button" class="navigation-toggle inline-flex h-10 w-10 items-center justify-center rounded-full p-2 text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-200 md:hidden" aria-controls="primary-navigation" aria-expanded="false" aria-label="Open navigation menu">
+                    <span class="menu-icon" aria-hidden="true">
+                        <span class="menu-icon__line menu-icon__line--top"></span>
+                        <span class="menu-icon__line menu-icon__line--middle"></span>
+                        <span class="menu-icon__line menu-icon__line--bottom"></span>
+                    </span>
+                </button>
+                <div id="primary-navigation" class="mobile-navigation fixed left-0 right-0 top-16 z-50 flex w-full flex-col items-stretch gap-1 border-t border-white/15 bg-slate-900/90 px-4 pb-4 pt-2 text-sm font-medium shadow-2xl backdrop-blur-xl md:static md:z-auto md:ml-8 md:flex md:flex-1 md:flex-row md:items-center md:justify-between md:gap-6 md:border-0 md:bg-transparent md:p-0 md:shadow-none md:backdrop-blur-none">
+                    <a href="{% url 'flight_search' %}" class="block w-full rounded-md py-3 transition hover:bg-slate-800 hover:text-amber-200 md:w-auto md:py-2 md:hover:bg-transparent">Search Flights</a>
+                    <a href="{% url 'pnr_lookup' %}" class="block w-full rounded-md py-3 transition hover:bg-slate-800 hover:text-amber-200 md:w-auto md:py-2 md:hover:bg-transparent">Find Booking</a>
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'my_bookings' %}" class="block w-full rounded-md py-3 transition hover:bg-slate-800 hover:text-amber-200 md:w-auto md:py-2 md:hover:bg-transparent">My Bookings</a>
+                        <span class="block w-full py-3 text-slate-300 md:w-auto md:py-2">{{ user.username }}</span>
+                        <form method="post" action="{% url 'logout' %}" class="w-full md:w-auto">
+                            {% csrf_token %}
+                            <button type="submit" class="w-full rounded-md border border-white/25 px-4 py-3 text-white transition hover:bg-white/10 md:py-2">Sign Out</button>
+                        </form>
+                    {% else %}
+                        <a href="{% url 'login' %}" class="block w-full rounded-md py-3 transition hover:bg-slate-800 hover:text-amber-200 md:w-auto md:py-2 md:hover:bg-transparent">Sign In</a>
+                        <a href="{% url 'signup' %}" class="block w-full rounded-md bg-amber-200 px-4 py-3 text-center font-semibold text-slate-950 transition hover:bg-amber-100 md:w-auto md:py-2">Create Account</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Body -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-gray-400 py-6 border-t border-slate-800 text-center text-sm">
+        <p>© 2026 Python Airlines Systems.</p>
+    </footer>
+
+    <style>
+        body.account-page-body {
+            background:
+                radial-gradient(ellipse at 12% 8%, rgba(186, 230, 253, 0.72), transparent 40%),
+                radial-gradient(ellipse at 88% 18%, rgba(219, 234, 254, 0.58), transparent 36%),
+                linear-gradient(135deg, #f8fcff 0%, #f8fafc 52%, #eff6ff 100%);
+        }
+
+        .account-glass-panel {
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            background: linear-gradient(
+                135deg,
+                rgba(255, 255, 255, 0.82),
+                rgba(224, 242, 254, 0.62) 54%,
+                rgba(219, 234, 254, 0.52)
+            );
+            box-shadow: 0 24px 70px rgba(15, 23, 42, 0.1);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+        }
+
+        .menu-icon {
+            display: flex;
+            width: 21px;
+            height: 16px;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .menu-icon__line {
+            display: block;
+            width: 100%;
+            height: 2px;
+            border-radius: 9999px;
+            background: currentColor;
+            transition: transform 220ms ease, opacity 160ms ease;
+        }
+
+        .navigation-toggle:hover,
+        .navigation-toggle:active,
+        .navigation-toggle:focus {
+            background: transparent !important;
+            color: #fef3c7;
+        }
+
+        .navigation-toggle[aria-expanded="true"] .menu-icon__line--top {
+            transform: translateY(7px) rotate(45deg);
+        }
+
+        .navigation-toggle[aria-expanded="true"] .menu-icon__line--middle {
+            opacity: 0;
+        }
+
+        .navigation-toggle[aria-expanded="true"] .menu-icon__line--bottom {
+            transform: translateY(-7px) rotate(-45deg);
+        }
+
+        .mobile-navigation {
+            visibility: hidden;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(-0.75rem);
+            transform-origin: top;
+            transition: opacity 220ms ease, transform 220ms ease, visibility 220ms ease;
+        }
+
+        .mobile-navigation.is-open {
+            visibility: visible;
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
+
+        @media (min-width: 768px) {
+            .mobile-navigation {
+                visibility: visible;
+                opacity: 1;
+                pointer-events: auto;
+                transform: none;
+                transition: none;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .menu-icon__line,
+            .mobile-navigation {
+                transition-duration: 0.01ms;
+            }
+        }
+    </style>
+    <script>
+        const navigationToggle = document.getElementById('navigation-toggle');
+        const primaryNavigation = document.getElementById('primary-navigation');
+
+        navigationToggle.addEventListener('click', () => {
+            const expanded = navigationToggle.getAttribute('aria-expanded') === 'true';
+            navigationToggle.setAttribute('aria-expanded', String(!expanded));
+            navigationToggle.setAttribute(
+                'aria-label',
+                expanded ? 'Open navigation menu' : 'Close navigation menu'
+            );
+            primaryNavigation.classList.toggle('is-open', !expanded);
+        });
+    </script>
+</body>
+</html>

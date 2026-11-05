@@ -1,0 +1,33 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Create Account - Python Airlines{% endblock %}
+{% block body_class %}account-page-body{% endblock %}
+
+{% block content %}
+<div class="mx-auto my-8 max-w-md space-y-6">
+    <div class="text-center">
+        <p class="text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-amber-700">A smoother journey starts here</p>
+        <h1 class="text-3xl font-extrabold text-slate-900">Create your account</h1>
+        <p class="mt-2 text-sm text-slate-600">Keep your flight bookings together and manage them online.</p>
+    </div>
+
+    <form method="post" class="account-glass-panel space-y-4 rounded-2xl p-6">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{{ form.non_field_errors }}</div>
+        {% endif %}
+        {% for field in form %}
+            <div class="space-y-1">
+                <label for="{{ field.id_for_label }}" class="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    {{ field.label }}{% if field.field.required %}<span class="ml-1 text-red-600" aria-hidden="true">*</span><span class="sr-only"> (required)</span>{% endif %}
+                </label>
+                {{ field }}
+                {% if field.help_text %}<div class="text-xs leading-relaxed text-slate-500">{{ field.help_text|safe }}</div>{% endif %}
+                {% if field.errors %}<p class="text-xs text-red-600">{{ field.errors|striptags }}</p>{% endif %}
+            </div>
+        {% endfor %}
+        <button type="submit" class="w-full rounded-lg bg-amber-200 py-3 font-semibold text-slate-950 transition hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-400">Create Account</button>
+        <p class="text-center text-sm text-slate-600">Already have an account? <a href="{% url 'login' %}" class="font-semibold text-amber-800 hover:text-amber-900">Sign in</a></p>
+    </form>
+</div>
+{% endblock %}

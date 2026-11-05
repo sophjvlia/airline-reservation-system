@@ -1,0 +1,277 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Python Airlines - server-rendered Django on Lambda with private PostgreSQL RDS.
+
+Parameters:
+  DbInstanceClass:
+    Type: String
+    Default: db.t4g.micro
+    Description: Small single-AZ PostgreSQL class; verify availability and pricing in your chosen Region.
+  DbAllocatedStorage:
+    Type: Number
+    Default: 20
+    MinValue: 20
+    MaxValue: 100
+  EnableDeletionProtection:
+    Type: String
+    AllowedValues: ['true', 'false']
+    Default: 'false'
+    Description: Enable RDS deletion protection for deployments where retaining data is essential.
+
+Conditions:
+  DeletionProtectionEnabled: !Equals [!Ref EnableDeletionProtection, 'true']
+
+Resources:
+  AirlineVpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.20.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: python-airlines-vpc
+
+  PrivateSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref AirlineVpc
+      CidrBlock: 10.20.1.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: python-airlines-private-a
+
+  PrivateSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref AirlineVpc
+      CidrBlock: 10.20.2.0/24
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: python-airlines-private-b
+
+  LambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Lambda egress to PostgreSQL and Secrets Manager endpoint.
+      VpcId: !Ref AirlineVpc
+      SecurityGroupEgress: []
+
+  DatabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: PostgreSQL access only from the Django Lambda.
+      VpcId: !Ref AirlineVpc
+      SecurityGroupEgress: []
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref LambdaSecurityGroup
+
+  SecretsEndpointSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Secrets Manager endpoint access only from the Django Lambda.
+      VpcId: !Ref AirlineVpc
+      SecurityGroupEgress: []
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          SourceSecurityGroupId: !Ref LambdaSecurityGroup
+
+  LambdaToDatabaseEgress:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref LambdaSecurityGroup
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      DestinationSecurityGroupId: !Ref DatabaseSecurityGroup
+
+  LambdaToSecretsEndpointEgress:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref LambdaSecurityGroup
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+      DestinationSecurityGroupId: !Ref SecretsEndpointSecurityGroup
+
+  SecretsManagerEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: Interface
+      VpcId: !Ref AirlineVpc
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.secretsmanager
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - !Ref PrivateSubnetA
+      SecurityGroupIds:
+        - !Ref SecretsEndpointSecurityGroup
+
+  DatabaseSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Private subnet group for Python Airlines PostgreSQL.
+      SubnetIds:
+        - !Ref PrivateSubnetA
+        - !Ref PrivateSubnetB
+
+  DatabaseCredentials:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: Master credentials for Python Airlines PostgreSQL.
+      GenerateSecretString:
+        SecretStringTemplate: '{"username":"airline_app"}'
+        GenerateStringKey: password
+        PasswordLength: 32
+        ExcludePunctuation: true
+
+  DjangoSecretKey:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: Django secret key for Python Airlines.
+      GenerateSecretString:
+        PasswordLength: 50
+        ExcludePunctuation: true
+
+  AirlineDatabase:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:
+      Engine: postgres
+      DBInstanceClass: !Ref DbInstanceClass
+      AllocatedStorage: !Ref DbAllocatedStorage
+      StorageType: gp3
+      StorageEncrypted: true
+      DBName: pythonairlines
+      MasterUsername: !Sub '{{resolve:secretsmanager:${DatabaseCredentials}:SecretString:username}}'
+      MasterUserPassword: !Sub '{{resolve:secretsmanager:${DatabaseCredentials}:SecretString:password}}'
+      DBSubnetGroupName: !Ref DatabaseSubnetGroup
+      VPCSecurityGroups:
+        - !Ref DatabaseSecurityGroup
+      PubliclyAccessible: false
+      MultiAZ: false
+      BackupRetentionPeriod: 1
+      DeletionProtection: !If [DeletionProtectionEnabled, true, false]
+
+  DjangoWeb:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Architectures:
+        - x86_64
+      MemorySize: 1024
+      Timeout: 30
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - !Ref PrivateSubnetA
+          - !Ref PrivateSubnetB
+      Policies:
+        - AWSLambdaVPCAccessExecutionRole
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref DatabaseCredentials
+                - !Ref DjangoSecretKey
+      Environment:
+        Variables:
+          DB_HOST: !GetAtt AirlineDatabase.Endpoint.Address
+          DB_PORT: !GetAtt AirlineDatabase.Endpoint.Port
+          DB_NAME: pythonairlines
+          DB_SECRET_ARN: !Ref DatabaseCredentials
+          DJANGO_SECRET_ARN: !Ref DjangoSecretKey
+          DJANGO_DEBUG: 'False'
+          DJANGO_SECURE_SSL_REDIRECT: 'False'
+          DJANGO_ALLOWED_HOSTS: !Sub '.execute-api.${AWS::Region}.${AWS::URLSuffix}'
+          DJANGO_CSRF_TRUSTED_ORIGINS: !Sub 'https://*.execute-api.${AWS::Region}.${AWS::URLSuffix}'
+      Events:
+        RootRoute:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /
+            Method: ANY
+        ProxyRoute:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /{proxy+}
+            Method: ANY
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: .
+      DockerTag: python-airlines-lambda
+
+  DjangoMigrations:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Architectures:
+        - x86_64
+      MemorySize: 1024
+      Timeout: 300
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - !Ref PrivateSubnetA
+          - !Ref PrivateSubnetB
+      Policies:
+        - AWSLambdaVPCAccessExecutionRole
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref DatabaseCredentials
+                - !Ref DjangoSecretKey
+      Environment:
+        Variables:
+          DB_HOST: !GetAtt AirlineDatabase.Endpoint.Address
+          DB_PORT: !GetAtt AirlineDatabase.Endpoint.Port
+          DB_NAME: pythonairlines
+          DB_SECRET_ARN: !Ref DatabaseCredentials
+          DJANGO_SECRET_ARN: !Ref DjangoSecretKey
+          DJANGO_DEBUG: 'False'
+          DJANGO_SECURE_SSL_REDIRECT: 'False'
+    Metadata:
+      Dockerfile: Dockerfile.migrate
+      DockerContext: .
+      DockerTag: python-airlines-migrations
+
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: $default
+      Description: Public HTTPS entry point for the Python Airlines Django application.
+
+Outputs:
+  ApplicationUrl:
+    Description: HTTPS URL for the server-rendered Django application.
+    Value: !Sub 'https://${HttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/'
+  DatabaseEndpoint:
+    Description: Private RDS endpoint; it is reachable only from the Lambda security group.
+    Value: !GetAtt AirlineDatabase.Endpoint.Address
+  DatabaseSecretArn:
+    Description: ARN of the generated database credentials secret.
+    Value: !Ref DatabaseCredentials
+  DjangoSecretArn:
+    Description: ARN of the generated Django secret key.
+    Value: !Ref DjangoSecretKey
+  MigrationFunctionName:
+    Description: Invoke this one-off Lambda to apply Django database migrations.
+    Value: !Ref DjangoMigrations

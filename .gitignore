@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# Local databases and generated static files
+*.sqlite3
+*.sqlite3-journal
+*.db
+staticfiles/
+media/
+
+# Django and test output
+*.log
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# SAM and deployment-local configuration
+.aws-sam/
+samconfig.toml
+migration-result.json
+
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+.aws/
+*.pem
+*.key
+credentials
+secrets/
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

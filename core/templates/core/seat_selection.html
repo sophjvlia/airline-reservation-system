@@ -1,0 +1,144 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Select Your Seat - Python Airlines{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto space-y-6 my-8">
+    
+    <!-- Header -->
+    <div class="text-center space-y-1">
+        <h1 class="text-2xl font-extrabold text-slate-900">Choose Your Seat</h1>
+        <p class="flex items-center justify-center gap-1 text-xs text-slate-500">
+            Flight {{ flight.callsign }} | {{ flight.origin.code }}
+            <svg aria-hidden="true" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+            </svg>
+            {{ flight.destination.code }}
+        </p>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="bg-red-50 border border-red-200 text-red-700 text-xs p-3 rounded-xl">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Cabin Map Card -->
+    <div class="bg-white rounded-xl shadow-lg border border-slate-200 p-6 space-y-6">
+        
+        <!-- Legend -->
+        <div class="flex justify-center space-x-6 text-xs text-slate-600 border-b pb-4">
+            <div class="flex items-center space-x-2">
+                <div class="w-4 h-4 bg-slate-100 border border-slate-300 rounded"></div>
+                <span>Available</span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <div class="w-4 h-4 bg-indigo-600 rounded"></div>
+                <span>Selected</span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <div class="w-4 h-4 bg-slate-200 rounded opacity-50"></div>
+                <span>Occupied</span>
+            </div>
+        </div>
+
+        <form method="POST" id="seatForm" class="space-y-6">
+            {% csrf_token %}
+            <input type="hidden" name="seat_number" id="selectedSeatInput" value="">
+
+            <!-- Aircraft Cabin Grid -->
+            <div class="w-full max-w-sm mx-auto space-y-3 bg-slate-50 p-3 sm:p-6 rounded-2xl border border-slate-200">
+                <div class="mb-4 flex items-center justify-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                    <svg aria-hidden="true" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 19.5V4.5m0 0L5.25 11.25M12 4.5l6.75 6.75" />
+                    </svg>
+                    <span>Front of Aircraft</span>
+                    <svg aria-hidden="true" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 19.5V4.5m0 0L5.25 11.25M12 4.5l6.75 6.75" />
+                    </svg>
+                </div>
+                
+                {% for row in rows %}
+                <div class="grid grid-cols-[1.5rem_repeat(3,minmax(0,1fr))_0.75rem_repeat(3,minmax(0,1fr))] gap-1 items-center">
+                    <span class="text-right text-xs font-mono font-bold text-slate-400">{{ row }}</span>
+                        {% for col in columns %}
+                            {% with seat_id=row|stringformat:"s"|add:col %}
+                                {% if seat_id in booked_seats %}
+                                    <div class="aspect-square w-full max-w-9 justify-self-center bg-slate-200 text-slate-400 rounded-lg flex items-center justify-center text-xs font-mono font-bold cursor-not-allowed opacity-60" title="Occupied">
+                                        {{ col }}
+                                    </div>
+                                {% else %}
+                                    <button type="button" onclick="selectSeat('{{ seat_id }}')" id="seat-{{ seat_id }}"
+                                            class="seat-btn aspect-square w-full max-w-9 justify-self-center bg-white border border-slate-300 text-slate-700 rounded-lg flex items-center justify-center text-xs font-mono font-bold hover:bg-indigo-50 hover:border-indigo-600 hover:text-indigo-700 transition shadow-sm">
+                                        {{ col }}
+                                    </button>
+                                {% endif %}
+                            {% endwith %}
+                            
+                            <!-- Aisle separator in the middle -->
+                            {% if col == 'C' %}
+                                <div aria-hidden="true"></div>
+                            {% endif %}
+                        {% endfor %}
+                </div>
+                {% endfor %}
+                
+                <div class="mt-4 flex items-center justify-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                    <svg aria-hidden="true" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m0 0 6.75-6.75M12 19.5l-6.75-6.75" />
+                    </svg>
+                    <span>Rear of Aircraft</span>
+                    <svg aria-hidden="true" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m0 0 6.75-6.75M12 19.5l-6.75-6.75" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Selection Status & Submit -->
+            <div class="flex items-center justify-between pt-4 border-t border-slate-100">
+                <div>
+                    <span class="text-xs text-slate-400 uppercase block">Chosen Seat</span>
+                    <span id="displaySelectedSeat" class="font-mono font-bold text-lg text-indigo-600">None Selected</span>
+                </div>
+                <button type="submit" id="proceedBtn" disabled 
+                        class="bg-amber-200 hover:bg-amber-100 disabled:bg-slate-300 disabled:text-slate-600 text-slate-950 font-semibold px-6 py-2.5 rounded-lg text-sm shadow transition">
+                    <span>Continue to Checkout</span>
+                    <svg aria-hidden="true" class="ml-1 inline h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                    </svg>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .seat-btn.is-selected:hover {
+        background-color: #a5b4fc;
+        border-color: #6366f1;
+        color: #3730a3;
+    }
+</style>
+
+<script>
+    function selectSeat(seatId) {
+        // Clear previous selection styling
+        document.querySelectorAll('.seat-btn').forEach(btn => {
+            btn.classList.remove('bg-indigo-600', 'text-white', 'border-indigo-600', 'is-selected');
+            btn.classList.add('bg-white', 'text-slate-700', 'border-slate-300');
+        });
+
+        // Highlight clicked seat
+        const btn = document.getElementById('seat-' + seatId);
+        btn.classList.remove('bg-white', 'text-slate-700', 'border-slate-300');
+        btn.classList.add('bg-indigo-600', 'text-white', 'border-indigo-600', 'is-selected');
+
+        // Update hidden input and display
+        document.getElementById('selectedSeatInput').value = seatId;
+        document.getElementById('displaySelectedSeat').innerText = seatId;
+        document.getElementById('proceedBtn').removeAttribute('disabled');
+    }
+</script>
+{% endblock %}
