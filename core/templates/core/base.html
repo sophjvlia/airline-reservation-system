@@ -26,7 +26,7 @@
                         <span class="menu-icon__line menu-icon__line--bottom"></span>
                     </span>
                 </button>
-                <div id="primary-navigation" class="mobile-navigation fixed left-0 right-0 top-16 z-50 flex w-full flex-col items-stretch gap-1 border-t border-white/15 bg-slate-900/90 px-4 pb-4 pt-2 text-sm font-medium shadow-2xl backdrop-blur-xl md:static md:z-auto md:ml-8 md:flex md:flex-1 md:flex-row md:items-center md:justify-between md:gap-6 md:border-0 md:bg-transparent md:p-0 md:shadow-none md:backdrop-blur-none">
+                <div id="primary-navigation" class="mobile-navigation fixed left-0 right-0 top-16 z-50 flex w-full flex-col items-stretch gap-1 border-t border-white/15 bg-slate-900/90 px-4 pb-4 pt-2 text-sm font-medium shadow-2xl backdrop-blur-xl md:static md:z-auto md:ml-8 md:flex md:flex-1 md:flex-row md:items-center md:justify-end md:gap-6 md:border-0 md:bg-transparent md:p-0 md:shadow-none md:backdrop-blur-none">
                     <a href="{% url 'flight_search' %}" class="block w-full rounded-md py-3 transition hover:bg-slate-800 hover:text-amber-200 md:w-auto md:py-2 md:hover:bg-transparent">Search Flights</a>
                     <a href="{% url 'pnr_lookup' %}" class="block w-full rounded-md py-3 transition hover:bg-slate-800 hover:text-amber-200 md:w-auto md:py-2 md:hover:bg-transparent">Find Booking</a>
                     {% if user.is_authenticated %}

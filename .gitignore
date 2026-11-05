@@ -25,6 +25,8 @@ htmlcov/
 .aws-sam/
 samconfig.toml
 migration-result.json
+seed-result.json
+seed-payload.json
 
 # Local environment and credentials
 .env

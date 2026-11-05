@@ -140,18 +140,17 @@ sam build --use-container
 sam deploy --guided
 ```
 
-The stack outputs `ApplicationUrl`. After deployment, apply database migrations using the `MigrationFunctionName` output:
+The stack outputs `ApplicationUrl`. The private migration Lambda supports two allowlisted actions: `migrate` and `seed_future_flights`. The default `{}` payload preserves the migration behavior:
 
-```bash
-aws lambda invoke --function-name <MigrationFunctionName> --cli-binary-format raw-in-base64-out --payload '{}' migration-result.json
+```powershell
+$functionName = aws cloudformation describe-stacks --stack-name python-airlines --region ap-southeast-1 --query "Stacks[0].Outputs[?OutputKey=='MigrationFunctionName'].OutputValue | [0]" --output text
+aws lambda invoke --function-name $functionName --region ap-southeast-1 --cli-binary-format raw-in-base64-out --payload '{}' migration-result.json
+Get-Content migration-result.json -Raw
 ```
 
-The migration function runs in the private VPC and uses the same database and secret settings as the web app. Inspect `migration-result.json` and the function logs before using the application. Do not run `seed_data` against production; that command deletes existing airport and flight rows.
+To populate the AWS database with the safe, repeatable sample schedule, invoke the same function with the seed action:
 
-### Cost and availability notes
-
-This scaffold avoids a dedicated application load balancer and NAT gateway. Lambda and API Gateway costs scale with requests, but RDS, the Secrets Manager secrets, and the Secrets Manager VPC endpoint incur ongoing charges while provisioned. The database is small and single-AZ to reduce baseline cost, so it has no automatic cross-AZ failover. Check current prices, database class availability, and service quotas in the chosen Region before deploying.
-
-The RDS deletion policy creates a snapshot when the stack is deleted; snapshots can continue to incur storage charges. Export or retain data you need, and review stack changes before deleting resources. This scaffold has not been deployed to AWS from this repository.
-
-The flight-search backdrop is a locally stored Unsplash coastal image (`photo-1518837695005-2083093ee35b`), served from the app's static files under the [Unsplash License](https://unsplash.com/license).
+```powershell
+aws lambda invoke --function-name $functionName --region ap-southeast-1 --cli-binary-format raw-in-base64-out --payload '{"action":"seed_future_flights"}' seed-result.json
+Get-Content seed-result.json -Raw
+```

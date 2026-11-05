@@ -9,6 +9,7 @@ from django.utils import timezone
 from .forms import SignUpForm
 from .models import Airport, Flight, Reservation
 from .services import cancel_reservation, get_booked_seats, search_itineraries
+from migration_entrypoint import handler as migration_lambda_handler
 
 
 class FlightSearchTests(TestCase):
@@ -311,6 +312,42 @@ class FutureFlightSeedTests(TestCase):
             [flight.callsign for flight in itineraries[0]['flights']],
             ['PA26-11-KULSIN', 'PA26-11-SINLHR'],
         )
+
+
+class MigrationLambdaActionTests(TestCase):
+    @patch('migration_entrypoint.load_secrets')
+    @patch('django.setup')
+    @patch('django.core.management.call_command')
+    def test_default_action_runs_migrations(self, call_command, setup, load_secrets):
+        response = migration_lambda_handler({}, None)
+
+        self.assertEqual(response, {'status': 'migrations applied'})
+        load_secrets.assert_called_once_with()
+        setup.assert_called_once_with()
+        call_command.assert_called_once_with('migrate', interactive=False)
+
+    @patch('migration_entrypoint.load_secrets')
+    @patch('django.setup')
+    @patch('django.core.management.call_command')
+    def test_seed_action_runs_only_future_flight_seeder(
+        self,
+        call_command,
+        setup,
+        load_secrets,
+    ):
+        response = migration_lambda_handler({'action': 'seed_future_flights'}, None)
+
+        self.assertEqual(response, {'status': 'future flights seeded'})
+        load_secrets.assert_called_once_with()
+        setup.assert_called_once_with()
+        call_command.assert_called_once_with('seed_future_flights')
+
+    @patch('migration_entrypoint.load_secrets')
+    def test_unknown_action_fails_before_loading_secrets(self, load_secrets):
+        with self.assertRaisesMessage(ValueError, 'Unsupported migration Lambda action'):
+            migration_lambda_handler({'action': 'seed_data'}, None)
+
+        load_secrets.assert_not_called()
 
 
 class AccountBookingTests(TestCase):
