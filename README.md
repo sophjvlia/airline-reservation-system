@@ -2,6 +2,8 @@
 
 > A robust, server-rendered airline reservation platform built with Django, HTMX, and Tailwind CSS, following modular enterprise architecture and rigorous database concurrency controls.
 
+[**Live application**](https://daqua3pvbi.execute-api.ap-southeast-1.amazonaws.com/)
+
 [![Django](https://img.shields.io/badge/Django-5.x-green?style=flat-square&logo=django)](https://www.djangoproject.com/)
 [![HTMX](https://img.shields.io/badge/HTMX-1.9-blue?style=flat-square&logo=htmx)](https://htmx.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.x-38B2AC?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)
